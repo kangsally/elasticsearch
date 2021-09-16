@@ -179,4 +179,67 @@
     ```
 
     이렇게 하면 start.sh와 stop.sh 에 실행권한이 생김
+    
+    
+    
+    
+
+
+#### Elasticsearch 환경설정
+
+
+
+1.  jvm.options 설정
+
+   ```
+   vi config/jvm.options
+   ```
+
+   테스트 편집기에 하기 입력하면 힙메모리 설정 가능 (기본 1gb) 단, 30gb를 넘지 않도록 한다. (Xms와 Xmx는 같은 값 넣어야 함)
+
+   ```
+   -Xms512m
+   -Xmx512m
+   ```
+
+   
+
+2. Elastic search.yml 설정 - https://esbook.kimjmin.net/02-install/2.3-elasticsearch/2.3.2-elasticsearch.yml
+
+   ```
+   vi config/elasticsearch.yml
+   ```
+
+     매 라인의 들여쓰기가 정확하지 않으면 같은 레벨에 설정되어야 할 값들이 하위 레벨 설정으로 들어가는 경우가 있dma. 또한**`<key>: <value>`**가운데에 있는 콜론**`:`**과**`<value>`**값 사이에는 반드시 공백이 있어야 하며 붙여쓰게 되면 오류가 발생하기 때문에 띄어쓰기에 항상 주의해야 함.
+
+   
+
+   - data 경로 바꾸기  - 현재는 es-714 폴더 하위에 data 폴더가 있음 -> data 폴더를 es-714와 동일한 계층에 생성하고 거기로 data path 바꾸는 설정  (위치는 pwd로 알 수 있다)
+     항상 elasticsearch를 사용하는 user가 data, log 폴더 쓰기 권한을 가지고 있어야 한다. ls -la 로 확인 가능
+
+     ```
+     path.data: "/home/kimjmin/data"
+     path.logs: "/home/kimjmin/logs"
+     
+     // 아래처럼 써도 됨
+     path:
+     	data: "/home/kimjmin/data"
+     	logs: "/home/kimjmin/logs"
+     ```
+
+   
+
+   - 하기 처럼 command 라인으로 설정 가능
+
+     ```
+     bin/elasticsearch -E node.name="node-new"
+     ```
+
+     
+
+   - network.host 값의 경우
+     - `_site_` 변수값이면  로컬 네트워크 주소가 되는데, VM Instance에서 Internal IP가 된다
+     - `_global_` 변수값이면  로컬 네트워크 주소가 되는데, VM Instance에서 External IP가 된다
+
+
 
