@@ -237,9 +237,76 @@
 
      
 
-   - network.host 값의 경우
-     - `_site_` 변수값이면  로컬 네트워크 주소가 되는데, VM Instance에서 Internal IP가 된다
-     - `_global_` 변수값이면  로컬 네트워크 주소가 되는데, VM Instance에서 External IP가 된다
+- network.host 값의 경우
+
+  - network.host 값을 지정하지 않으면 같은 localhost에서 밖에 접근이 안된다. 그래서 외부에서 접근가능하게 하려면 지정해줘야 함. (+방화벽도 열어줘야 함)
+
+  - `_site_` 변수값이면 로컬 네트워크 주소가 되는데, VM Instance에서 Internal IP가 된다, 직접 값을 넣어도 되고 그냥 변수값을 넣어도 됨 - 강의에서는 이걸로 사용을 하고 나중에 GCP 에서 firewall 설정 추가를 하면(아래 참고) 아래 _global_ 변수 설정 필요 없이 External IP로 접근할 수 있음 (아래처럼 local 도 추가하면 내부, 외부 모두 접근 가능!)
+
+    ```
+    network.host: ["_local_", "_site_"]
+    ```
+
+  - `_global_` 변수값이면 로컬 네트워크 주소가 되는데, VM Instance에서 External IP가 된다, 직접 값을 넣어도 되고 그냥 변수값을 넣어도 됨 - External IP 는 GCP가 외부에 방화벽 밖에 설정해놓은 주소
+
+  - network.host 값을 설정하고 엘라스틱 서치를 실행하면 바로 꺼짐 -> host 값을 넣지 않았을 때는 elasticsearch 가 dev 환경이었지만 여기에 값을 넣는 순간 외부환경과 연결되기 때문에 엘라스틱 서치는 여러가지 부트스트랩 체크를 하게 된다. -> 마지막 로그를 보면 왜 실행이 안되었는지 이유를 확인할 수 있음
+
+    - max file descriptor 바꿔주기 - 리눅스 머신 설정을 바꿔줘야함 -> 운영체제는 1프로세스 당 접근할 수 있는 파일의 개수에 한계를 두고 있는데 elaticsearch 는 사용하는 파일 개수가 굉장히 많기 때문에 이 개수 설정값을 늘려줘야함  (elasticseach doc에서 reference - system config - important system configuration - increase file descriptors 설명보기 - 2가지 방법이 있음)
+
+      - ulimit 방식 - 한 세션에만 적용되는 temporary 설정
+
+      - etc/security/limits.conf 파일 수정 - 영구적인 설정 방법
+
+        ```
+        ls -l /etc/security/limits.conf  // -> 권한이 루트권한으로 되어있음 그러므로 수정하려면 sudo로 해야함
+        sudo vi /etc/security/limits.conf // -> 마지막 # End of file 아래에 kimjmin - nofile 65535 입력 -> 이후 시스템 재시작해야함
+        ```
+
+        
+
+    - max virtual memory areas vm.max_map_count 바꿔주기 - 리눅스 머신 설정을 바꿔줘야함 (elasticseach doc에서 reference - system config - important system configuration - virtual memory 설명보기)
+
+      -  한 세션에만 적용되는 temporary 설정
+
+        ```
+        sysctl -w vm.max_map_count=262144
+        ```
+
+      - etc/sysctl.conf 파일 수정 - 영구적인 설정 방법
+
+        ```
+        ls -la /etc/sysctl.conf // -> 권한이 루트권한으로 되어있음 그러므로 수정하려면 sudo로 해야함
+        sudo vi /etc/sysctl.conf // -> vm.max_map_count=262144 입력 -> 이후 시스템 재시작해야함
+        sudo shutdown -r // -> 재시작 명령어  (bin/elasticsearch 명령어로 실행해도 됨)
+        ```
+
+    - discovery settings are unsuitable for production use
+
+      elasticsearch.yml 에 다음 설정값 추가
+
+      ```
+      discovery.seed_hosts: ["elastic-1"]  // terminal에 hostname 입력하면 나오는 이름 (ip 주소를 넣어도 됨)
+      cluster.initial_master_nodes: ["node-1"]
+      ```
+
+    
+
+    - 위 설정을 마치면 더이상 curl localhost:9200 으로 접근 불가능 (즉, localhost로 접근 불가능) curl 10.178.0.2:9200 이렇게 해야 접근 가능
+
+      
+
+    - External IP로도 접근가능하게 하려면 instance에 firewall 설정을 추가해줘야한다.
+
+      - GCP VM Instance에서 오른쪽 connect 바로 옆 세로 ... 을 누르고 View network details 누름
+      - 왼쪽 firewall 메뉴 선택
+      - create a firewall rule 클릭
+      - Name 입력 (ex. elastic) 
+      - Target tags 입력 (ex. elastic) -> 추후 VM에 추가되는 태그 이름이 된다
+      - Source IP ranges 는 0.0.0.0/0 입력 (filter IP임 -> 0.0.0.0/0 은 외부 어디서나 접근이 가능하다는 의미 만약 이걸 내 로컬에서만 접속하고 싶다하면 내 로컬 주소를 입력하면 됨)
+      - Specified protocols and ports 에서 tcp port 로 입력 (ex. 9200)
+      - create!
+      - VM Instance (in Computer Engine) 에서 해당 인스턴스 누르고 상단 EDIT 버튼 누르고 Network tags 에 elastic 태그 추가 (위에서 생성한 태그) 후 저장
+
 
 
 
