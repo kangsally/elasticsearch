@@ -356,6 +356,87 @@
   curl "http://34.64.137.113:9200/_cat/nodes?v" // title도 같이 확인 가능
   ```
 
+
+#### 보안
+
+- elasticsearch.yml 파일에 보안설정 추가
+
+  ```
+  xpack.security.enabled: true // id&pw 적용 설정
+  xpack.security.transport.ssl.enabled: true   //transport layer security 적용 설정 (production 환경)
+  
+  + 공개키, 대칭키 입력하기 -> 이 전에 이 키를 만들어두어야 함 -> 키를 만들려면 아래 과정을 거쳐서 certification 만들어야한다.
+  ```
+
+  
+
+- elasticsearch 에서는 certificate를 만들 수 있는 [cert util](https://www.elastic.co/guide/en/elasticsearch/reference/7.11/encrypting-communications-certificates.html) 제공
+
+  ```
+  ./bin/elasticsearch-certutil ca
+  ```
+
+  - outfile명 입력 (default는 elastic-stack-ca.p12)
+  - pw 입력 -> 공개키 암호가 된다.
+
+  - es-714폴더 아래 elastic-stack-ca.p12 라는 이름의 certificate이 생성되어 있는 것을 확인
+
+
+
+- 다음 명령어 입력 (리눅스에서 \는 줄바꿈의 의미를 가진다)
+
+  ```
+  ./bin/elasticsearch-certutil cert \  
+  --ca elastic-stack-ca.p12 \ // 생성된 cert 이름
+  --dns elastic-1,elastic-2,elastic3 \ 
+  --ip 10.190.0.2,10.190.0.3,10.190.0.4 \
+  --out config/certs/es-cluster.p12 \     // 지정할 파일 이름
+  ```
+
+  - 이렇게 하면 위에서 만든 pw 입력하라고 함
+
+  - 그 다음 es-cluster.p12 에서 사용할 pw 입력
+
+  - config/certs에 es-cluster.p12 생성되어있는 것 확인
+
+    
+
+- elasticsearch.yml 파일에 보안설정 추가
+
+  ```
+  xpack.security.transport.ssl.keystore.path: cert/es-cluster.p12   //절대 경로 설정을 안하면 자동으로 config/ 를 찾음
+  xpack.security.transport.ssl.truststore.path: cert/es-cluster.p12
+  ```
+
+  - 이 다음에 원래는 다음이 추가되어야 하나 직접 pw 설정하면 보안에 문제가 된다
+
+    ```
+    xpack.security.transport.ssl.keystore.secure_password
+    xpack.security.transport.ssl.truststore.secure_password
+    ```
+
+  - 그래서 다음 명령어로 별도로 입력
+
+    ```
+    ./bin/elasticsearch-keystore create 
+    ./bin/elasticsearch-keystore add xpack.security.transport.ssl.keystore.secure_password
+    ./bin/elasticsearch-keystore add xpack.security.transport.ssl.truststore.secure_password
+    ```
+
+    
+
+-> 이후 해당 인증서를 복사해서 elastic-2, elastic-3에도 저장한다. 근데 직접 복사가 안되서 내 컴퓨터에 한번 저장 후에 그걸로 저장해야함. 이렇게 하면 이제 노드끼리 보안된 통신이 가능하게 된다.
+
+```
+scp -i ~/.ssh/es-rsa kimjmin@34.64.137.113:/home/kimjmin/es-714/config/certs/es-cluster.p12 ./
+scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.237.42:/home/kimjmin/es-714/config/certs/es-cluster.p12
+scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.193.32:/home/kimjmin/es-714/config/certs/es-cluster.p12
+scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.167.194:/home/kimjmin/es-714/config/certs/es-cluster.p12
+```
+
+
+
+-> 이후 elasticsearch 에서 제공하는 실행파일로 user id & pw 를 설정하면 curl과 같은 Rest API 사용시에 user의 id & pw 도 같이 넣어서 요청해야 정상 응답하게 된다.
   
 
 
