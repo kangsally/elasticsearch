@@ -309,4 +309,53 @@
 
 
 
+#### Elasticsearch Cluster 만들기
+
+- 앞의 과정을 반복 또는 image로 복사하여 instance를 총 3가지를 만든다.
+
+- node name 각각 node-2, node-3, seed host를 elastic-2, elastic-3 로,  master nodes 를 node-2, node-3로 변경
+
+- cluster에 포함될 instance 들의 Host 주소를 관리할 별도의 파일을 만든다(ip를 설정파일에 직접 넣는 것 보다 이렇게 host 파일에 지정해주는 것이 좋음) -> 아래 설정을 마치면 이렇게 접근 가능  curl elastic-2:9200 -> instance 모두에 설정해두자! -> 이렇게 해야 elasticsearch.yml 에서 discovery.seed_hosts을 : [elasitc-1, elastic-2, elastic-3] 이렇게 쓸 수 있음 ip 주소 대신
+
+  ``` 
+  sudo vi /etc/hosts
+  
+  --insert--
+  10.178.0.2	elastic-1
+  10.178.0.3	elastic-2
+  10.178.0.4	elastic-3
+  ```
+
+
+
+- elastic-2와 elastic-3를 elastic-1에서 접근 가능하도록 Firewall 설정 (elastic-1은 위에서 외부 접근 가능하도록 firewall 만듬)
+
+  - Target tags: elastic-internal
+  - Source filter: Source tags
+  - Source tags: elastic-internal
+  - Specified protocols and ports 에서 tcp port: 9200, 9300
+  - 3가지 instance (elastic-1, elastic-2, elastic-3) 에 모두 해당 태그 추가 (elastic-2와 elastic-3는 위에 elastic태그 빼줘야 함)
+
+- 3가지 instance (elastic-1, elastic-2, elastic-3)에 elasticsearch.yml 설정 추가
+
+  ```
+  discovery.seed_hosts: ["elastic-1", "elastic-2", "elastic-3"] // /etc/hosts에서 설정한 값
+  cluster.initial_master_nodes: ["node-1", "node-2", "node-3"]
+  ```
+
+  
+
+- 그리고 나서 3개의 instance를 실행할 때 data 폴더를 한번 rm -rf 로 지워주고 bin/elasticsearch 로 실행하자 왜냐하면 기존에 별개로 실행했던 이력이 있으면 cluster 로 안묶일 수 있기 때문
+
+
+
+- 다른 터미널에서 cluster에 속한 노드들 확인
+
+  ```
+  curl -X GET "localhost:9200/_cat/nodes" // 클러스터에 속한 노드들 확인
+  curl "http://34.64.137.113:9200/_cat/nodes?v" // title도 같이 확인 가능
+  ```
+
+  
+
 
