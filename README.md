@@ -404,8 +404,8 @@
 - elasticsearch.yml 파일에 보안설정 추가
 
   ```
-  xpack.security.transport.ssl.keystore.path: cert/es-cluster.p12   //절대 경로 설정을 안하면 자동으로 config/ 를 찾음
-  xpack.security.transport.ssl.truststore.path: cert/es-cluster.p12
+  xpack.security.transport.ssl.keystore.path: certs/es-cluster.p12   //절대 경로 설정을 안하면 자동으로 config/ 를 찾음
+  xpack.security.transport.ssl.truststore.path: certs/es-cluster.p12
   ```
 
   - 이 다음에 원래는 다음이 추가되어야 하나 직접 pw 설정하면 보안에 문제가 된다
@@ -429,14 +429,22 @@
 
 ```
 scp -i ~/.ssh/es-rsa kimjmin@34.64.137.113:/home/kimjmin/es-714/config/certs/es-cluster.p12 ./
-scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.237.42:/home/kimjmin/es-714/config/certs/es-cluster.p12
+
+다음 elastic-2와 elastic-3 에 certs 디렉토리 만들어 줌
 scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.193.32:/home/kimjmin/es-714/config/certs/es-cluster.p12
 scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.167.194:/home/kimjmin/es-714/config/certs/es-cluster.p12
 ```
 
+-> 이후 elastic-2와 elastic-3에도 동일하게 security 관련 설정을 elasticsearch.yml에 해준다.
 
+-> 이후 elasticsearch 에서 제공하는 실행파일로 user id & pw 를 설정하면 curl과 같은 Rest API 사용시에 user의 id & pw 도 같이 넣어서 요청해야 정상 응답하게 된다. (만약 패스워드 잊어버렸을 때는 data 폴더를 지우면 되긴 하는데 그러면 데이터들 다 날아가서 일반적으로 이렇게 하면 안된다) 이렇게 만든 id & password 는 cluster 전체에 적용된다 (Native Realm)
 
--> 이후 elasticsearch 에서 제공하는 실행파일로 user id & pw 를 설정하면 curl과 같은 Rest API 사용시에 user의 id & pw 도 같이 넣어서 요청해야 정상 응답하게 된다.
-  
+```
+./bin/elasticsearch-setup-passwords interactive
+```
 
+-> 아래는 super user 로 유저별로 생성해주는 방법인데 이걸로 만든 경우에는 팀에 공유하지 않고 개인만 알고 있는 것이 좋다. 이 방법은 file realm 에 적용되어서 이렇게 등록한 node에만 이 id&password로 접속 가능하다. (File Realm)
 
+```
+bin/elasticsearch-users user add kimjmin -p password -r superuser
+```
