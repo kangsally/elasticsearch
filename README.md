@@ -448,3 +448,20 @@ scp -i ~/.ssh/es-rsa ./es-cluster.p12 kimjmin@34.64.167.194:/home/kimjmin/es-714
 ```
 bin/elasticsearch-users user add kimjmin -p password -r superuser
 ```
+
+
+#### 데몬 실행(백그라운드 실행)
+
+```
+start.sh, stop.sh 파일 생성 및 실행 권한 부여
+$ echo 'bin/elasticsearch -d -p es.pid' > start.sh
+​
+$ echo 'kill `cat es.pid`' > stop.sh
+​
+$ chmod 755 start.sh stop.sh
+​
+$ ./start.sh
+​
+$ ./stop.sh
+```
+
